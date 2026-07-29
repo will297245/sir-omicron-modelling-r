@@ -1,3 +1,18 @@
+---
+title: "Deterministic and Stochastic Epidemic Modelling in R"
+author: "Will Lodder"
+date: last-modified
+format:
+  html:
+    toc: true
+    code-fold: true
+  pdf:
+    toc: true
+execute:
+  warning: false
+  message: false
+---
+
 ```{r}
 #| label: setup
 #| include: false
