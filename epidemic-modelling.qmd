@@ -451,7 +451,6 @@ As we can see, if there exists no vaccination against the illness over time, we 
 We will now implement a markov model to investigate how things may change. The markov model may be more useful in practice as we are able to compute confidence intervals.
 
 ```{r}
-omicron_data <- read.csv("/Users/willlodder/Desktop/Math245/omicron.csv")
 
 #print(head(omicron_data))
 T <- 1000
@@ -519,7 +518,6 @@ df1 <- simulate_markov(
   N = N_eff
 )
 
-omicron_data <- read.csv("/Users/willlodder/Desktop/Math245/omicron.csv")
 omicron_data$date <- as.Date(omicron_data$date)
 
 # Remove initial model row because incidence[1] is artificial
@@ -597,7 +595,6 @@ df2 <- simulate_markov(
   N = N_eff
 )
 
-omicron_data <- read.csv("/Users/willlodder/Desktop/Math245/omicron.csv")
 omicron_data$date <- as.Date(omicron_data$date)
 
 # Remove initial model row because incidence[1] is artificial
