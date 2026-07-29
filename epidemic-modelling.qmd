@@ -120,8 +120,6 @@ As we can see, using a larger time step such as 7 days can cause issues with the
 
 ```{r}
 
-omicron_data <- read.csv("omicron.csv")
-
 
 rows_omicron_data <- nrow(omicron_data)
 initial_population <- 56490048
