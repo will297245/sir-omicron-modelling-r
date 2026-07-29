@@ -13,6 +13,7 @@ source("R-code/model-error-function.r")
 source("R-code/beta-param-fitting.r")
 source("R-code/exact-SIRV-soln.r")
 source("R-code/one-step-Markov.r")
+source("R-code/beta-param-fitting-Markov.r")
 source("R-code/Markov-simulation.r")
 
 omicron_data <- read.csv("data/omicron.csv")
