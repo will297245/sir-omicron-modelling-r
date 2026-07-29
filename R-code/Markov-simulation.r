@@ -79,15 +79,3 @@ simulate_many_markov <- function(M, beta, gamma, mu, x0, y0, v0, T, N_eff) {
 
 
 
-
-
-simulation_summary <- do.call(
-  rbind,
-  lapply(split(many_sims$incidence_prop, many_sims$t), function(z) {
-    data.frame(
-      mean = mean(z),
-      lower = as.numeric(quantile(z, 0.025)),
-      upper = as.numeric(quantile(z, 0.975))
-    )
-  })
-)
