@@ -1,0 +1,740 @@
+---
+title: "Deterministic and Stochastic Epidemic Modelling in R"
+author: "Will Lodder"
+date: last-modified
+format:
+  html:
+    toc: true
+    code-fold: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+#| warning: false
+#| message: false
+
+library(ggplot2)
+library(deSolve)
+
+source("R-code/single-Euler-step.r")
+source("R-code/daily-change-in-cases.r")
+source("R-code/model-error-function.r")
+source("R-code/beta-param-fitting.r")
+source("R-code/varying-beta-values.r")
+source("R-code/exact-SIRV-soln.r")
+source("R-code/one-step-Markov.r")
+source("R-code/beta-param-fitting-Markov.r")
+source("R-code/Markov-simulation.r")
+
+omicron_data <- read.csv("data/omicron.csv")
+omicron_data$date <- as.Date(omicron_data$date)
+
+N_UK <- 56490048
+```
+
+
+
+
+The SIR model
+
+
+
+```{r}
+print(head(simulate_sir_euler(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
+```
+
+
+
+
+
+
+```{r}
+
+beta <- 0.6
+gamma <- 0.2
+x0 <- 0
+y0 <- 1
+T <- 40
+h <- 0.1
+
+
+zero_susceptibles <- simulate_sir_euler(0.6, 0.2, 0, 1, 40, 0.1)
+
+#exact soln
+zero_susceptibles$exact <- y0 * exp(-gamma * zero_susceptibles$t)
+
+#defining absolute value of differences
+differences <- abs(zero_susceptibles$y - zero_susceptibles$exact)
+
+p0 <- ggplot(zero_susceptibles, aes(x = t, y = differences)) +
+    geom_line() +
+    geom_point(size = 0.8) +
+    xlab("Time") +
+    ylab("Absolute difference")
+
+print(p0)
+```
+
+
+
+
+
+```{r}
+
+
+#now want to use h = 7 days
+#time now moves in weekly steps, will use t = 42 as its the closest 
+#multiple of 7 to 40 and prevents issue 
+#of fractional step sizes
+
+weekly_estimate <- simulate_sir_euler(0.6, 0.2, 0.9, 0.1, 42, 7)
+
+p1 <- ggplot(weekly_estimate, aes(x = t)) +
+    geom_line(aes(y = x, colour = "Susceptible")) +
+    geom_line(aes(y = y, colour = "Infected")) +
+    #inserting legend as we have multiple lines
+    scale_colour_manual(
+        name = "Variable",
+        values = c("Susceptible" = "blue", "Infected" = "red")
+    ) +
+    xlab("Time") +
+    ylab("Population Proportion")
+
+print(p1)
+
+
+```
+
+As we can see, using a larger time step such as 7 days can cause issues with the estimation. We observe population proportions greater than 1, which is clearly impossible. This therefore emphasizes we should use smaller step sizes, sich as $h = 0.1$ to increase the accuracy of the euler approximation. 
+
+
+
+
+
+
+
+```{r}
+
+
+rows_omicron_data <- nrow(omicron_data)
+initial_population <- 56490048
+
+#just defining time vector, will adjoin this to df later
+omicron_data$time <- 0:(rows_omicron_data - 1)
+
+#defining the incidence as in the question
+omicron_data$incidence <- omicron_data$cases / initial_population
+
+#adding the vectors to our dataframe
+p2 <- ggplot(omicron_data, aes(x = time, y = incidence)) +
+    geom_line(colour = "#ff00ff") +
+    xlab("Time") +
+    ylab("Incidence")
+
+print(p2)
+```
+
+
+
+
+```{r}
+print(head(calculate_incidence(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
+```
+
+
+
+```{r}
+beta_variable_function <- function_factory_beta(0.2, 0.9, 0.1, 40, 0.1)
+
+beta_0_5 <- beta_variable_function(0.5)
+beta_0_6 <- beta_variable_function(0.6)
+beta_0_7 <- beta_variable_function(0.7)
+
+#making a data frame which i will plot
+beta_variable_df <- data.frame(
+    t = beta_0_5$t,
+    beta_0_5 = beta_0_5$incidence,
+    beta_0_6 = beta_0_6$incidence,
+    beta_0_7 = beta_0_7$incidence
+)
+
+p3 <- ggplot(beta_variable_df, aes(x = t)) +
+    geom_line(aes(y = beta_0_5, colour = "beta = 0.5")) +
+    geom_line(aes(y = beta_0_6, colour = "beta = 0.6")) +
+    geom_line(aes(y = beta_0_7, colour = "beta = 0.7")) +
+    scale_colour_manual(
+        name = "Model",
+
+        values = c(
+            "beta = 0.5" = "blue",
+            "beta = 0.6" = "red",
+            "beta = 0.7" = "green"
+        )
+    ) +
+    xlab("Time") +
+    ylab("Incidence")
+
+print(p3)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+
+print(calculate_incidence_sse(0.6, 0.1, 0.9, 0.1, omicron_data))
+
+```
+
+
+
+```{r}
+
+error_function <- factory_error(0.1, 1 - 0.004, 0.004, omicron_data)
+
+#betas as outlined in question, storing initial vector of zeros for the errors
+beta_variable <- seq(from = 0.1, to = 0.2, by = 0.01)
+errors_variable <- rep(0, length(beta_variable))
+
+
+#updating our errors vector
+for (i in seq_along(beta_variable)){
+    errors_variable[i] <- error_function(beta_variable[i])
+}
+
+
+#storing data frame which will be plotted
+df_p4 <- data.frame(
+    betas = beta_variable,
+    errors = errors_variable
+)
+
+
+p4 <- ggplot(df_p4, aes(x = betas, y = errors)) +
+    geom_line(colour = "purple") + 
+    xlab("Beta") +
+    ylab("Squared difference")
+
+print(p4)
+```
+
+
+
+
+```{r}
+
+
+
+
+#now using it for given data
+findmin_function <- findmin_factory(0.1, 1 - 0.004, 0.004, omicron_data)
+best_beta <- findmin_function(0.1, 0.2, 100)
+
+print(best_beta)
+```
+
+
+
+
+```{r}
+#incidence
+observed_incidence <- omicron_data$cases / initial_population
+
+model_incidence <- calculate_incidence(
+  best_beta, 0.1, 1 - 0.004, 0.004,
+  T = nrow(omicron_data), h = 1
+)
+
+stopifnot(nrow(model_incidence) == nrow(omicron_data))
+
+
+
+df_p5 <- data.frame(
+    t = model_incidence$t,
+    observed_incidence = observed_incidence,
+    model_incidence = model_incidence$incidence
+)
+
+
+
+
+p5 <- ggplot(df_p5, aes(x = t)) +
+    geom_line(aes(y = observed_incidence, colour = "Observed")) +
+    geom_line(aes(y = model_incidence, colour = "Model")) +
+    scale_colour_manual(
+        name = "Variable",
+        values = c("Observed" = "red", "Model" = "blue")
+    ) +
+    xlab("Time") +
+    ylab("Incidence")
+
+
+print(p5)
+```
+
+
+
+
+
+```{r}
+
+
+
+euler_p6 <- simulate_sir_euler(0.15, 0.1, 1 - 0.004, 0.004, 40, 1)
+
+#converting to dataframe so its plottable
+SIRV_soln_p6 <- solve_sirv_ode(0.15, 0.1, 0, 1 - 0.004, 0.004, 0, 40, 1)
+SIRV_soln_p6 <- as.data.frame(SIRV_soln_p6)
+
+
+x_diffs <- abs(euler_p6$x - SIRV_soln_p6$x)
+y_diffs <- abs(euler_p6$y - SIRV_soln_p6$y)
+times_p6 <- SIRV_soln_p6$time
+
+
+df_p6 <- data.frame(
+    x_diffs = x_diffs,
+    y_diffs = y_diffs, 
+    time = times_p6
+)
+
+
+
+#plotting difference between the SIRV models solution for paramaters
+#and the solution given by euler approx. for each parameter
+
+p6 <- ggplot(df_p6, aes(x = time)) +
+    geom_line(aes(y = x_diffs, colour = "x differences")) +
+    geom_line(aes(y = y_diffs, colour = "y differences")) +
+    scale_colour_manual(
+        name = "Variable",
+        values = c(
+            "x differences" = "blue",
+            "y differences" = "red"
+        )
+    ) +
+    xlab("Time") +
+    ylab("Absolute difference")
+
+
+print(p6)
+```
+
+
+
+
+
+```{r}
+
+#following standard as before
+solution_p7 <- solve_sirv_ode(0.15, 0.1, 0.002, 1 - 0.004, 0.004, 0, 200, 1)
+
+
+solution_p7 <- as.data.frame(solution_p7)
+
+#pulling values from solution_p7
+time_p7 <- solution_p7$time
+x_p7 <- solution_p7$x
+y_p7 <- solution_p7$y
+v_p7 <- solution_p7$v
+
+#getting remaining population
+remainder <- 1 - solution_p7$x - solution_p7$y - solution_p7$v
+
+
+#making the dataframe
+df_p7 <- data.frame(
+    x_p7 = x_p7,
+    y_p7 = y_p7,
+    v_p7 = v_p7,
+    removed_proportion = remainder,
+    time_p7 = time_p7
+)
+
+#plotting
+p7 <- ggplot(df_p7, aes(x = time_p7)) +
+    geom_line(aes(y = x_p7, colour = "susceptible proportion")) +
+    geom_line(aes(y = y_p7, colour = "infectious proportion")) +
+    geom_line(aes(y = v_p7, colour = "vaccinated proportion")) +
+    geom_line(aes(y = remainder, colour = "removed proportion")) +
+    scale_colour_manual(
+        name = "Variable",
+        
+        values = c(
+            "susceptible proportion" = "blue",
+            "infectious proportion" = "red", 
+            "vaccinated proportion" = "green", 
+            "removed proportion" = "purple"
+        )
+    ) +
+    xlab("Time") +
+    ylab("Variable values")
+    
+
+print(p7)
+```
+
+
+
+
+
+```{r}
+
+
+mu_sequence <- seq(
+  from = 0,
+  to = 0.005,
+  by = 0.001
+)
+
+df_list <- vector(
+  mode = "list",
+  length = length(mu_sequence)
+)
+
+for (i in seq_along(mu_sequence)) {
+  sol <- solve_sirv_ode(
+    beta = 0.15,
+    gamma = 0.1,
+    mu = mu_sequence[i],
+    x0 = 1 - 0.004,
+    y0 = 0.004,
+    v0 = 0,
+    T = 200,
+    h = 1
+  )
+
+  sol <- as.data.frame(sol)
+
+  df_list[[i]] <- data.frame(
+    time = sol$time,
+    infectious_proportion = sol$y,
+    mu = factor(
+      mu_sequence[i],
+      levels = mu_sequence
+    )
+  )
+}
+
+df_p8 <- do.call(
+  rbind,
+  df_list
+)
+
+p8 <- ggplot(
+  df_p8,
+  aes(
+    x = time,
+    y = infectious_proportion,
+    colour = mu
+  )
+) +
+  geom_line() +
+  labs(
+    x = "Time",
+    y = "Infectious population proportion",
+    colour = expression(mu),
+    title = "Effect of the vaccination rate on infectious prevalence"
+  )
+
+print(p8)
+
+
+
+
+
+
+
+```
+
+
+
+
+When the vaccination rate is zero, the model produces a larger peak infectious proportion. This is consistent with the model mechanism: without vaccination, more individuals remain susceptible and can subsequently become infected. Increasing the vaccination rate reduces the peak in infectious prevalence under these fixed parameter assumptions. 
+
+
+
+We now implement a stochastic Markov model to represent process variability between epidemic paths. Repeated simulations can produce pointwise simulation envelopes, but these are not confidence intervals and do not include uncertainty in the fitted parameters.
+
+```{r}
+
+#print(head(omicron_data))
+T <- 1000
+
+
+```
+
+
+We now create a function which performs a single markov step, and then define a funciton which iterates this over T steps of size 1. 
+```{r}
+#next step will be to implement the markov process and iterate over
+
+#defining intital vectors as was in the project
+df1 <- initial_populations(1-0.004, 0.004, 0, T = T)
+print(head(df1))
+
+```
+
+For visualisation, the stochastic model uses an effective population size smaller than the UK population. This deliberately increases process variability. Consequently, the simulated envelope is illustrative and should not be interpreted as calibrated UK-level uncertainty.
+
+
+```{r}
+
+T <- 1000
+
+#df1 <- simulate_markov(
+  #beta = 0.15,
+  #gamma = 0.1,
+  #mu = 0.001,
+  #x0 = 1 - 0.004,
+  #y0 = 0.004,
+  #v0 = 0,
+  #T = T,
+  #N = 56490048
+#)
+
+#print(head(df1))
+
+
+#plot(df1$t, df1$incidence / 56490048, type = "l")
+
+
+
+
+# Real UK population used for observed case proportions
+N_UK <- 56490048
+
+# Effective population size used inside stochastic Markov model
+# Smaller N_eff = more visible stochastic variation
+N_eff <- 50000
+
+T <- 1000
+
+set.seed(4)
+
+df1 <- simulate_markov(
+    
+  beta = best_beta,
+  gamma = 0.1,
+  mu = 0.000,
+  x0 = 1 - 0.004,
+  y0 = 0.004,
+  v0 = 0,
+  T = nrow(omicron_data),
+  N = N_eff
+)
+
+omicron_data$date <- as.Date(omicron_data$date)
+
+# Remove the initial placeholder; remaining rows correspond to daily transitions.
+model_incidence <- df1[-1, c("t", "incidence")]
+stopifnot(nrow(model_incidence) == nrow(omicron_data))
+n <- nrow(omicron_data)
+
+comparison_df <- data.frame(
+  date = omicron_data$date[1:n],
+  observed_cases = omicron_data$cases[1:n],
+  observed_prop = omicron_data$cases[1:n] / N_UK,
+  model_incidence = model_incidence$incidence[1:n],
+  model_prop = model_incidence$incidence[1:n] / N_eff
+)
+
+p1 <- ggplot(comparison_df, aes(x = date)) +
+  geom_line(aes(y = observed_prop, linetype = "Observed daily cases / N")) +
+  geom_line(aes(y = model_prop, linetype = "Markov model incidence / N_eff")) +
+  labs(
+    x = "Date",
+    y = "Daily incidence proportion",
+    title = "Observed Omicron Daily Cases vs Markov Model Incidence",
+    linetype = "Series"
+  ) +
+  theme_minimal()
+
+
+
+
+print(p1)
+
+
+```
+
+
+The deterministic Euler model and the discrete-time Markov model use different one-day transition formulations. We therefore estimate the transmission parameter again using the expected incidence implied by the Markov transition probabilities, rather than transferring the deterministic estimate without recalibration.
+
+```{r}
+
+
+
+fit_markov <- optimize(
+  f = markov_error_beta,
+  interval = c(0.01, 0.5),
+  data = omicron_data,
+  gamma = 0.1,
+  mu = 0,
+  x0 = 1 - 0.004,
+  y0 = 0.004,
+  v0 = 0,
+  N_UK = N_UK
+)
+
+beta_best_markov <- fit_markov$minimum
+markov_min_error <- fit_markov$objective
+
+print(beta_best_markov)
+print(markov_min_error)
+
+```
+
+
+We now use this corrected beta value and plot a single path using this. 
+```{r}
+
+df2 <- simulate_markov(
+    
+  beta = beta_best_markov,
+  gamma = 0.1,
+  mu = 0.000,
+  x0 = 1 - 0.004,
+  y0 = 0.004,
+  v0 = 0,
+  T = nrow(omicron_data),
+  N = N_eff
+)
+
+omicron_data$date <- as.Date(omicron_data$date)
+
+# Remove the initial placeholder; remaining rows correspond to daily transitions.
+model_incidence_2 <- df2[-1, c("t", "incidence")]
+stopifnot(nrow(model_incidence_2) == nrow(omicron_data))
+n <- nrow(omicron_data)
+
+comparison_df_2 <- data.frame(
+  date = omicron_data$date[1:n],
+  observed_cases = omicron_data$cases[1:n],
+  observed_prop = omicron_data$cases[1:n] / N_UK,
+  model_incidence = model_incidence_2$incidence[1:n],
+  model_prop = model_incidence_2$incidence[1:n] / N_eff
+)
+
+p2 <- ggplot(comparison_df_2, aes(x = date)) +
+  geom_line(aes(y = observed_prop, linetype = "Observed daily cases / N")) +
+  geom_line(aes(y = model_prop, linetype = "Markov model incidence / N_eff")) +
+  labs(
+    x = "Date",
+    y = "Daily incidence proportion",
+    title = "Observed Omicron Daily Cases vs Markov Model Incidence",
+    linetype = "Series"
+  ) +
+  theme_minimal()
+
+
+
+
+print(p2)
+
+
+
+```
+
+
+
+We now simulate 500 epidemic paths conditional on the fitted parameters and calculate pointwise 2.5% and 97.5% empirical quantiles. The ribbon represents process variability under the model; it does not incorporate parameter-estimation uncertainty. 
+
+```{r}
+# One simulated transition for each observed daily case
+T_fit <- length(omicron_data$cases)
+
+stopifnot(
+  length(T_fit) == 1,
+  is.finite(T_fit),
+  T_fit >= 1
+)
+
+T_fit <- as.integer(T_fit)
+
+
+
+set.seed(123)
+
+many_sims <- simulate_many_markov(
+M = 500,
+beta = beta_best_markov,
+gamma = 0.1,
+mu = 0,
+x0 = 1 - 0.004,
+y0 = 0.004,
+v0 = 0,
+T = T_fit,
+N_eff = N_eff
+)
+
+
+
+
+
+
+
+
+simulation_summary <- aggregate(
+  incidence_prop ~ t,
+  data = many_sims,
+  FUN = function(z) c(
+    mean = mean(z),
+    lower = unname(quantile(z, 0.025)),
+    upper = unname(quantile(z, 0.975))
+  )
+)
+
+simulation_summary <- data.frame(
+  t = simulation_summary$t,
+  mean = simulation_summary$incidence_prop[, "mean"],
+  lower = simulation_summary$incidence_prop[, "lower"],
+  upper = simulation_summary$incidence_prop[, "upper"]
+)
+
+stopifnot(nrow(simulation_summary) == nrow(omicron_data))
+n <- nrow(omicron_data)
+
+plot_df <- data.frame(
+  date = as.Date(omicron_data$date[1:n]),
+  observed_prop = omicron_data$cases[1:n] / N_UK,
+  mean = simulation_summary$mean[1:n],
+  lower = simulation_summary$lower[1:n],
+  upper = simulation_summary$upper[1:n]
+)
+
+
+p_many <- ggplot(plot_df, aes(x = date)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.25) +
+  geom_line(aes(y = mean, linetype = "Mean Markov incidence")) +
+  geom_line(aes(y = observed_prop, linetype = "Observed daily cases / N")) +
+  labs(
+    x = "Date",
+    y = "Daily incidence proportion",
+    title = "Observed Omicron Cases vs Pointwise Markov Simulation Envelope",
+    linetype = "Series"
+  ) +
+  theme_minimal()
+
+print(p_many)
+
+
+
+```
+
+
+
+
+
+## Interpretation and limitations
+
+The models are intentionally simplified. They assume homogeneous mixing, constant parameters over the fitting window, and that reported cases are directly comparable with model incidence. They omit reporting delays, under-ascertainment, demographic structure, behavioural changes and time-varying interventions. The effective stochastic population size of 50,000 is chosen to make process variation visible and is not a calibrated representation of the full UK population. The data file is included in the repository, but its original public source and the precise geographical definition of the population denominator should be documented before the analysis is used as formal empirical evidence.
