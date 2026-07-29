@@ -14,11 +14,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-# Question 1
+
 The SIR model
 
 
-## (a)
+
 ```{r}
 
 
@@ -76,7 +76,7 @@ print(head(euler(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
 
 
 
-## (b)
+
 ```{r}
 
 beta <- 0.6
@@ -107,7 +107,7 @@ print(p0)
 
 
 
-## (c)
+
 ```{r}
 
 
@@ -136,12 +136,12 @@ print(p1)
 
 As we can see, using a larger time step such as 7 days can cause issues with the estimation. We observe population proportions greater than 1, which is clearly impossible. This therefore emphasizes we should use smaller step sizes, sich as $h = 0.1$ to increase the accuracy of the euler approximation. 
 
-# Question 2
 
 
 
 
-## (a)
+
+
 ```{r}
 
 omicron_data <- read.csv("omicron.csv")
@@ -167,7 +167,7 @@ print(p2)
 
 
 
-## (b)
+
 ```{r}
 
 #incidence formula given in question as follows:
@@ -188,7 +188,7 @@ print(head(incidence(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
 ```
 
 
-## (c)
+
 ```{r}
 
 
@@ -239,9 +239,6 @@ print(p3)
 
 
 
-# Question 3
-
-## (a)
 
 ```{r}
 
@@ -268,7 +265,7 @@ print(error(0.6, 0.1, 0.9, 0.1, omicron_data))
 
 ```
 
-## (b)
+
 
 ```{r}
 factory_error <- function(gamma, x0, y0, data) {
@@ -310,7 +307,7 @@ print(p4)
 ```
 
 
-## (c)
+
 
 ```{r}
 
@@ -355,7 +352,7 @@ print(best_beta)
 ```
 
 
-## (d)
+
 
 ```{r}
 #incidence
@@ -389,9 +386,8 @@ print(p5)
 ```
 
 
-# Question 4
 
-## (a)
+
 
 ```{r}
 
@@ -468,7 +464,8 @@ print(p6)
 ```
 
 
-## (b)
+
+
 
 ```{r}
 
@@ -521,7 +518,8 @@ print(p7)
 ```
 
 
-## (c)
+
+
 
 ```{r}
 
