@@ -78,18 +78,6 @@ simulate_many_markov <- function(M, beta, gamma, mu, x0, y0, v0, T, N_eff) {
 
 
 
-many_sims <- simulate_many_markov(
-  M = M,
-  beta = beta_best_markov,
-  gamma = 0.1,
-  mu = 0,
-  x0 = 1 - 0.004,
-  y0 = 0.004,
-  v0 = 0,
-  T = T_fit,
-  N_eff = N_eff
-)
-
 
 
 
