@@ -1,3 +1,45 @@
+initial_populations <- function(
+    x0,
+    y0,
+    v0,
+    T,
+    N = 56490048
+) {
+  starting_susceptible <- as.integer(round(N * x0))
+  starting_infectious <- as.integer(round(N * y0))
+  starting_vaccinated <- as.integer(round(N * v0))
+
+  starting_removed <- N -
+    starting_susceptible -
+    starting_infectious -
+    starting_vaccinated
+
+  populations <- data.frame(
+    t = 0:T,
+    S = integer(T + 1),
+    I = integer(T + 1),
+    R = integer(T + 1),
+    V = integer(T + 1),
+    x = numeric(T + 1),
+    y = numeric(T + 1),
+    r = numeric(T + 1),
+    v = numeric(T + 1),
+    incidence = integer(T + 1)
+  )
+
+  populations$S[1] <- starting_susceptible
+  populations$I[1] <- starting_infectious
+  populations$R[1] <- starting_removed
+  populations$V[1] <- starting_vaccinated
+
+  populations$x[1] <- populations$S[1] / N
+  populations$y[1] <- populations$I[1] / N
+  populations$r[1] <- populations$R[1] / N
+  populations$v[1] <- populations$V[1] / N
+
+  populations
+}
+
 
 
 simulate_markov <- function(beta, gamma, mu, x0, y0, v0, T, N = 56490048) {
