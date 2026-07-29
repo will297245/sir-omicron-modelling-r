@@ -40,7 +40,7 @@ used to generate simulation paths and uncertainty bands.
 ## Repository contents
 
 - `epidemic-modelling.qmd` — complete Quarto analysis
-- `epidemic-modelling.r` — the underlying r code document
+- `R-code` — the underlying r code document
 - `data/omicron.csv` — data used in the analysis
 
 ## Reproducing the analysis
