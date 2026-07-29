@@ -1,5 +1,5 @@
 
-solve <- function(beta, gamma, mu, x0, y0, v0, T, h){
+solve_sirv_ode <- function(beta, gamma, mu, x0, y0, v0, T, h){
 
     state <- c(x = x0, y = y0, v = v0)
     parameters <- c(beta = beta , gamma = gamma , mu = mu )
