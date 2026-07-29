@@ -1,15 +1,24 @@
----
-title: "Epidemic Modelling in R"
-author: "Will Lodder"
-date: "`r Sys.Date()`"
-format: pdf
-editor_options:
-  markdown:
-    wrap: 72
----
+```{r}
+#| label: setup
+#| include: false
+#| warning: false
+#| message: false
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(deSolve)
+
+source("R-code/single-Euler-step.r")
+source("R-code/daily-change-in-cases.r")
+source("R-code/model-error-function.r")
+source("R-code/beta-param-fitting.r")
+source("R-code/exact-SIRV-soln.r")
+source("R-code/one-step-Markov.r")
+source("R-code/Markov-simulation.r")
+
+omicron_data <- read.csv("data/omicron.csv")
+omicron_data$date <- as.Date(omicron_data$date)
+
+N_UK <- 56490048
 ```
 
 
@@ -20,55 +29,6 @@ The SIR model
 
 
 ```{r}
-
-
-library(ggplot2)
-
-
-
-euler <- function(beta, gamma, x0, y0, T, h) {
-    #defining our number of steps
-    n <- as.integer(T / h)
-
-  #checking h divides T nicely
-  #stops errors that could arise if we have fractional step sizes
-
-    if (!isTRUE(all.equal(n * h, T))) {
-        stop("h doesnt divide T exactly")
-    }
-
-
-    #defining some initial vectors whcih we will replace later
-    t <- seq(0, T, by = h)
-    x <- rep(0, n + 1)
-    y <- rep(0, n + 1)
-
-
-
-    #making sure initial values coincide with question statement
-    x[1] <- x0
-    y[1] <- y0
-
-
-    #partial differential eqtns given in question
-    x_prime <- function(x_value, y_value) {
-        -beta * x_value * y_value
-    }
-
-    y_prime <- function(x_value, y_value) {
-        beta * x_value * y_value - gamma * y_value
-    }
-
-
-    #updating our vectors for each i
-    for (i in 1:n) {
-        x[i + 1] <- x[i] + h * x_prime(x[i], y[i])
-        y[i + 1] <- y[i] + h * y_prime(x[i], y[i])
-    }
-
-    data.frame(t = t, x = x, y = y)
-}
-
 print(head(euler(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
 ```
 
@@ -169,36 +129,12 @@ print(p2)
 
 
 ```{r}
-
-#incidence formula given in question as follows:
-# y(kh) - y((k-1)h) for k in \mathbb{N}
-incidence <- function(beta, gamma, x0, y0, T, h) {
-    model_output <- euler(beta, gamma, x0, y0, T, h)
-
-    #adding 0 to the start to make the vector lengths natch up to t vector
-    incidence_values <- c(0, diff(model_output$y))
-
-    data.frame(
-        t = model_output$t,
-        incidence = incidence_values
-    )
-}
-
 print(head(incidence(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
 ```
 
 
 
 ```{r}
-
-
-#this returns the incidence function of beta
-function_factory_2c <- function(gamma, x0, y0, T, h) {
-    function(beta) {
-        incidence(beta, gamma, x0, y0, T, h)
-    }
-}
-
 beta_variable_function <- function_factory_2c(0.2, 0.9, 0.1, 40, 0.1)
 
 beta_0_5 <- beta_variable_function(0.5)
@@ -242,25 +178,6 @@ print(p3)
 
 ```{r}
 
-error <- function(beta, gamma, x0, y0, data) {
-    #largest time value in data
-    T <- data$time[nrow(data)]
-    #assuming equal step size
-    h <- data$time[2] - data$time[1]
-
-    #incidence from data set
-    dt <- data$incidence
-    #estimated incidence from previous question function
-    mt <- incidence(beta, gamma, x0, y0, T, h)$incidence
-
-    #checking lengths of mt and dt are same
-    if (length(mt) != length(dt)) {
-        stop("Model output and data incidence have different lengths.")
-    }
-
-    sum((mt - dt)^2)
-}
-
 print(error(0.6, 0.1, 0.9, 0.1, omicron_data))
 
 ```
@@ -268,15 +185,6 @@ print(error(0.6, 0.1, 0.9, 0.1, omicron_data))
 
 
 ```{r}
-factory_error <- function(gamma, x0, y0, data) {
-    output <- function(beta) {
-        error(beta, gamma, x0, y0, data)
-    }
-
-    return(output)
-}
-
-
 
 error_function <- factory_error(0.1, 1 - 0.004, 0.004, omicron_data)
 
@@ -312,39 +220,9 @@ print(p4)
 ```{r}
 
 
-findmin_factory <- function(gamma, x0, y0, data){
-    #we want to find minimum beta between beta_min, nbeta_max with N steps
-    #we wish to return a function of beta_min, beta_max, N
-
-    error_function <- factory_error(gamma, x0, y0, data)
-
-    #will end up returning this function
-    findmin <- function(beta_min, beta_max,N){
-
-        errors_variable <- rep(0, N)
-
-        #will find errors for each of these
-        #then will return beta with lowest error
-        beta_sequence <- seq(from = beta_min, to = beta_max, length.out = N)
 
 
-        for (i in seq_along(beta_sequence)) {
-            errors_variable[i] <- error_function(beta_sequence[i])
-        }
-
-
-        #finding where minimum beta value is, then returning it
-        min_beta_position <- which.min(errors_variable)
-        return(beta_sequence[min_beta_position])
-
-
-    }
-    
-return(findmin)
-
-}
-
-#now using it how question specified
+#now using it for given data
 findmin_function <- findmin_factory(0.1, 1 - 0.004, 0.004, omicron_data)
 best_beta <- findmin_function(0.1, 0.2, 100)
 
@@ -392,23 +270,7 @@ print(p5)
 ```{r}
 
 library(deSolve)
-#had not used DeSolve prior, used similar method as in:
-#https://cran.r-project.org/web/packages/deSolve/vignettes/deSolve.pdf
 
-solve <- function(beta, gamma, mu, x0, y0, v0, T, h){
-
-    state <- c(x = x0, y = y0, v = v0)
-    parameters <- c(beta = beta , gamma = gamma , mu = mu )
-
-    SIRV <- function(t, state, parameters) {
-
-        with(as.list(c(state, parameters)), {
-        dx <-  -beta * x * y - mu * x
-        dy <-  beta * x * y - gamma * y
-        dv <- mu * x
-        list(c(dx, dy, dv))
-    })
-}
 
 tim <- seq(0, T, by = h)
 
@@ -524,19 +386,6 @@ print(p7)
 ```{r}
 
 
-#making a function factory so i can just do a sequence of mu's
-#should mean i dont have to define loads of different ones
-
-factory_vaccinated_prop <- function(beta, gamma, x0, y0, v0, T, h) {
-    output <- function(mu) {
-        solve(beta, gamma, mu, x0, y0, v0, T, h)
-    }
-
-    return(output)
-}
-
-
-
 mu_function <- factory_vaccinated_prop(0.15, 0.1, 1 - 0.004, 0.004, 0, 200, 1)
 
 #mu sequence 
@@ -596,43 +445,6 @@ omicron_data <- read.csv("/Users/willlodder/Desktop/Math245/omicron.csv")
 T <- 1000
 
 
-#making a function which sets up a data frame given our starting params
-initial_populations <- function(x0, y0, v0, T, N = 56490048) {
-  
-  starting_susceptible <- as.integer(round(N * x0))
-  starting_infectious  <- as.integer(round(N * y0))
-  starting_vaccinated  <- as.integer(round(N * v0))
-  starting_removed     <- N - starting_susceptible - starting_infectious - starting_vaccinated
-  
-  populations_df <- data.frame(
-    t = 0:T,
-    S = integer(T + 1),
-    I = integer(T + 1),
-    R = integer(T + 1),
-    V = integer(T + 1),
-    x = numeric(T + 1),
-    y = numeric(T + 1),
-    r = numeric(T + 1),
-    v = numeric(T + 1),
-    incidence = integer(T + 1)
-  )
-  
-  populations_df$S[1] <- starting_susceptible
-  populations_df$I[1] <- starting_infectious
-  populations_df$R[1] <- starting_removed
-  populations_df$V[1] <- starting_vaccinated
-  
-  populations_df$x[1] <- populations_df$S[1] / N
-  populations_df$y[1] <- populations_df$I[1] / N
-  populations_df$r[1] <- populations_df$R[1] / N
-  populations_df$v[1] <- populations_df$V[1] / N
-  
-  populations_df$incidence[1] <- 0
-  
-  return(populations_df)
-}
-
-
 ```
 
 
@@ -640,125 +452,9 @@ We now create a function which performs a single markov step, and then define a 
 ```{r}
 #next step will be to implement the markov process and iterate over
 
-
-one_step_markov <- function(S, I, R, V, beta, gamma, mu, N) {
-  
-  # 1. Infection and vaccination hazards
-  lambda_inf <- beta * I / N
-  lambda_vac <- mu
-  
-  # 2. Total hazard out of S
-  lambda_total <- lambda_inf + lambda_vac
-  
-  # 3. Convert hazards into one-day transition probabilities
-  if (lambda_total > 0) {
-    p_leave_S <- 1 - exp(-lambda_total)
-    
-    p_SI <- (lambda_inf / lambda_total) * p_leave_S
-    p_SV <- (lambda_vac / lambda_total) * p_leave_S
-  } else {
-    p_SI <- 0
-    p_SV <- 0
-  }
-  
-  p_stay <- 1 - p_SI - p_SV
-  
-  # 4. Removal probability
-  p_IR <- 1 - exp(-gamma)
-  
-  # 5. Random transitions from S
-  S_transitions <- as.vector(
-    rmultinom(
-      n = 1,
-      size = S,
-      prob = c(p_SI, p_SV, p_stay)
-    )
-  )
-  
-  N_SI <- S_transitions[1]  # new infections
-  N_SV <- S_transitions[2]  # new vaccinations
-  
-  # 6. Random recoveries from I
-  N_IR <- rbinom(
-    n = 1,
-    size = I,
-    prob = p_IR
-  )
-  
-  # 7. Update compartments
-  S_new <- S - N_SI - N_SV
-  I_new <- I + N_SI - N_IR
-  R_new <- R + N_IR
-  V_new <- V + N_SV
-  
-  # 8. Return new state and incidence
-  return(
-    list(
-      S = S_new,
-      I = I_new,
-      R = R_new,
-      V = V_new,
-      incidence = N_SI,
-      new_vaccinations = N_SV,
-      new_recoveries = N_IR
-    )
-  )
-
-  #i would do df$columnname[i] and replace it 
-}
-
-
 #defining intital vectors as was in the project
 df1 <- initial_populations(1-0.004, 0.004, 0, T = T)
 print(head(df1))
-
-
-for (i in 1:T){
-    
-}
-
-
-
-
-
-simulate_markov <- function(beta, gamma, mu, x0, y0, v0, T, N = 56490048) {
-  
-  df <- initial_populations(
-    x0 = x0,
-    y0 = y0,
-    v0 = v0,
-    T = T,
-    N = N
-  )
-  
-  for (i in 1:T) {
-    
-    step <- one_step_markov(
-      S = df$S[i],
-      I = df$I[i],
-      R = df$R[i],
-      V = df$V[i],
-      beta = beta,
-      gamma = gamma,
-      mu = mu,
-      N = N
-    )
-    
-    df$S[i + 1] <- step$S
-    df$I[i + 1] <- step$I
-    df$R[i + 1] <- step$R
-    df$V[i + 1] <- step$V
-    
-    df$incidence[i + 1] <- step$incidence
-    
-    df$x[i + 1] <- step$S / N
-    df$y[i + 1] <- step$I / N
-    df$r[i + 1] <- step$R / N
-    df$v[i + 1] <- step$V / N
-  }
-  
-  return(df)
-}
 
 ```
 
@@ -787,8 +483,6 @@ T <- 1000
 
 
 
-
-library(ggplot2)
 
 # Real UK population used for observed case proportions
 N_UK <- 56490048
@@ -853,106 +547,7 @@ This appears way off. this is because we are using the value beta_best which cal
 
 ```{r}
 
-# ------------------------------------------------------------
-# Fit beta using the correct Markov-style incidence definition
-# incidence = new infections / N
-# ------------------------------------------------------------
 
-markov_expected_incidence <- function(beta, gamma, mu, x0, y0, v0, T) {
-  
-  # Store proportions, not integer counts
-  x <- numeric(T + 1)
-  y <- numeric(T + 1)
-  r <- numeric(T + 1)
-  v <- numeric(T + 1)
-  incidence <- numeric(T + 1)
-  
-  # Initial conditions
-  x[1] <- x0
-  y[1] <- y0
-  v[1] <- v0
-  r[1] <- 1 - x0 - y0 - v0
-  incidence[1] <- 0
-  
-  for (i in 1:T) {
-    
-    # Markov hazards for one susceptible individual
-    lambda_inf <- beta * y[i]
-    lambda_vac <- mu
-    lambda_total <- lambda_inf + lambda_vac
-    
-    # One-day probabilities for S -> I and S -> V
-    if (lambda_total > 0) {
-      p_leave_S <- 1 - exp(-lambda_total)
-      p_SI <- (lambda_inf / lambda_total) * p_leave_S
-      p_SV <- (lambda_vac / lambda_total) * p_leave_S
-    } else {
-      p_SI <- 0
-      p_SV <- 0
-    }
-    
-    # One-day probability for I -> R
-    p_IR <- 1 - exp(-gamma)
-    
-    # Expected proportions moving between compartments
-    new_infections <- x[i] * p_SI
-    new_vaccinations <- x[i] * p_SV
-    new_recoveries <- y[i] * p_IR
-    
-    # Update proportions
-    x[i + 1] <- x[i] - new_infections - new_vaccinations
-    y[i + 1] <- y[i] + new_infections - new_recoveries
-    r[i + 1] <- r[i] + new_recoveries
-    v[i + 1] <- v[i] + new_vaccinations
-    
-    # Correct incidence: new infections, not y[i+1] - y[i]
-    incidence[i + 1] <- new_infections
-  }
-  
-  data.frame(
-    t = 0:T,
-    x = x,
-    y = y,
-    r = r,
-    v = v,
-    incidence = incidence
-  )
-}
-
-
-markov_error_beta <- function(beta, data, gamma, mu, x0, y0, v0, N_UK) {
-  
-  # Observed daily case proportion
-  observed_incidence <- data$cases / N_UK
-  
-  # We simulate one interval per observed daily case
-  T_fit <- length(observed_incidence)
-  
-  model <- markov_expected_incidence(
-    beta = beta,
-    gamma = gamma,
-    mu = mu,
-    x0 = x0,
-    y0 = y0,
-    v0 = v0,
-    T = T_fit
-  )
-  
-  # Remove incidence[1], because it is artificial
-  model_incidence <- model$incidence[-1]
-  
-  # Safety check
-  n <- min(length(observed_incidence), length(model_incidence))
-  
-  sum((model_incidence[1:n] - observed_incidence[1:n])^2)
-}
-
-
-# ------------------------------------------------------------
-# Actually find beta_best_markov
-# ------------------------------------------------------------
-
-N_UK <- 56490048
 
 fit_markov <- optimize(
   f = markov_error_beta,
@@ -1031,62 +626,6 @@ print(p2)
 We now want to find confidence bands, by taking M simulations and taking quantiles. 
 
 ```{r}
-
-# ------------------------------------------------------------
-# Extension: simulate many Markov paths and form uncertainty bands
-# ------------------------------------------------------------
-
-simulate_many_markov <- function(M, beta, gamma, mu, x0, y0, v0, T, N_eff) {
-  
-  simulations <- vector("list", M)
-  
-  for (m in 1:M) {
-    
-    sim <- simulate_markov(
-      beta = beta,
-      gamma = gamma,
-      mu = mu,
-      x0 = x0,
-      y0 = y0,
-      v0 = v0,
-      T = T,
-      N = N_eff
-    )
-    
-    # Remove first artificial incidence value
-    sim <- sim[-1, ]
-    
-    simulations[[m]] <- data.frame(
-      simulation = m,
-      t = sim$t,
-      incidence_prop = sim$incidence / N_eff
-    )
-  }
-  
-  do.call(rbind, simulations)
-}
-
-
-set.seed(123)
-
-M <- 5000
-T_fit <- nrow(omicron_data)
-
-many_sims <- simulate_many_markov(
-  M = M,
-  beta = beta_best_markov,
-  gamma = 0.1,
-  mu = 0,
-  x0 = 1 - 0.004,
-  y0 = 0.004,
-  v0 = 0,
-  T = T_fit,
-  N_eff = N_eff
-)
-# ------------------------------------------------------------
-# Summarise simulations at each time point
-# Safer version: avoids quantile name issues
-# ------------------------------------------------------------
 
 simulation_summary <- do.call(
   rbind,
