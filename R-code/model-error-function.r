@@ -16,3 +16,15 @@ error <- function(beta, gamma, x0, y0, data) {
 
     sum((mt - dt)^2)
 }
+
+
+
+#will later use the below function to fit beta 
+
+factory_error <- function(gamma, x0, y0, data) {
+    output <- function(beta) {
+        error(beta, gamma, x0, y0, data)
+    }
+
+    return(output)
+}
