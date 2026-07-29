@@ -76,12 +76,6 @@ simulate_many_markov <- function(M, beta, gamma, mu, x0, y0, v0, T, N_eff) {
 }
 
 
-set.seed(123)
-
-M <- 5000
-T_fit <- nrow(omicron_data)
-
-
 
 
 many_sims <- simulate_many_markov(
