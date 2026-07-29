@@ -25,11 +25,17 @@ used to generate simulation paths and uncertainty bands.
 - ggplot2
 - deSolve
 
-## Main results
+  
+## Main findings
 
-The project compares deterministic model incidence with observed Omicron case
-incidence. It also investigates how vaccination rates affect epidemic peaks and
-uses repeated stochastic simulations to quantify model uncertainty.
+- Coarse Euler steps produced unstable and epidemiologically invalid trajectories.
+- Increasing the vaccination-rate parameter reduced the simulated infectious peak.
+- Treating the net change in infectious prevalence as incidence produced a poor
+  model-data comparison.
+- Redefining incidence as new susceptible-to-infectious transitions and refitting
+  the model gave an estimated transmission parameter of approximately 0.136.
+- Repeated stochastic simulations were used to construct pointwise 95% simulation
+  envelopes.
 
 ## Repository contents
 
