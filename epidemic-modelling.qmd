@@ -45,7 +45,7 @@ The SIR model
 
 
 ```{r}
-print(head(euler(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
+print(head(simulate_sir_euler(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
 ```
 
 
@@ -63,7 +63,7 @@ T <- 40
 h <- 0.1
 
 
-zero_susceptibles <- euler(0.6, 0.2, 0, 1, 40, 0.1)
+zero_susceptibles <- simulate_sir_euler(0.6, 0.2, 0, 1, 40, 0.1)
 
 #exact soln
 zero_susceptibles$exact <- y0 * exp(-gamma * zero_susceptibles$t)
@@ -92,7 +92,7 @@ print(p0)
 #multiple of 7 to 40 and prevents issue 
 #of fractional step sizes
 
-weekly_estimate <- euler(0.6, 0.2, 0.9, 0.1, 42, 7)
+weekly_estimate <- simulate_sir_euler(0.6, 0.2, 0.9, 0.1, 42, 7)
 
 p1 <- ggplot(weekly_estimate, aes(x = t)) +
     geom_line(aes(y = x, colour = "Susceptible")) +
@@ -301,7 +301,7 @@ return(sol)
 
 
 
-euler_p6 <- euler(0.15, 0.1, 1 - 0.004, 0.004, 40, 1)
+euler_p6 <- simulate_sir_euler(0.15, 0.1, 1 - 0.004, 0.004, 40, 1)
 
 #converting to dataframe so its plottable
 SIRV_soln_p6 <- solve(0.15, 0.1, 0, 1 - 0.004, 0.004, 0, 40, 1)
