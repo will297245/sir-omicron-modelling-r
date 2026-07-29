@@ -1,5 +1,5 @@
 ---
-title: "Math 245 Project - 39437094"
+title: "Epidemic Modelling in R"
 author: "Will Lodder"
 date: "`r Sys.Date()`"
 format: pdf
