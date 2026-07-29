@@ -1,5 +1,5 @@
 
-euler <- function(beta, gamma, x0, y0, T, h) {
+simulate_sir_euler <- function(beta, gamma, x0, y0, T, h) {
     #defining our number of steps
     n <- as.integer(T / h)
 
