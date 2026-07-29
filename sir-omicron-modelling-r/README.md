@@ -34,7 +34,6 @@ The report is configured for HTML while debugging, avoiding a separate LaTeX dep
 - `epidemic-modelling.qmd` — complete analysis
 - `R-code/` — model, fitting and simulation functions
 - `data/omicron.csv` — observed daily case data
-- `tests/smoke-tests.R` — lightweight validation tests
 
 ## Interpretation
 
