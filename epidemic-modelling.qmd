@@ -285,18 +285,6 @@ print(p5)
 ```{r}
 
 
-tim <- seq(0, T, by = h)
-
-
-
-sol <- ode(y = state, times = tim, func = SIRV, parms = parameters)
-
-
-return(sol)
-
-}
-
-
 
 euler_p6 <- simulate_sir_euler(0.15, 0.1, 1 - 0.004, 0.004, 40, 1)
 
