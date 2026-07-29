@@ -87,28 +87,3 @@ markov_error_beta <- function(beta, data, gamma, mu, x0, y0, v0, N_UK) {
   sum((model_incidence[1:n] - observed_incidence[1:n])^2)
 }
 
-
-# ------------------------------------------------------------
-# Actually find beta_best_markov
-# ------------------------------------------------------------
-
-N_UK <- 56490048
-
-fit_markov <- optimize(
-  f = markov_error_beta,
-  interval = c(0.01, 0.5),
-  data = omicron_data,
-  gamma = 0.1,
-  mu = 0,
-  x0 = 1 - 0.004,
-  y0 = 0.004,
-  v0 = 0,
-  N_UK = N_UK
-)
-
-beta_best_markov <- fit_markov$minimum
-markov_min_error <- fit_markov$objective
-
-print(beta_best_markov)
-print(markov_min_error)
-
