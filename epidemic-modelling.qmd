@@ -387,45 +387,68 @@ print(p7)
 ```{r}
 
 
-mu_function <- factory_vaccinated_prop(0.15, 0.1, 1 - 0.004, 0.004, 0, 200, 1)
+mu_sequence <- seq(
+  from = 0,
+  to = 0.005,
+  by = 0.001
+)
 
-#mu sequence 
-mu_sequence <- seq(from = 0, to = 0.005, by = 0.001)
-
-
-
-#making an empty vector of length 6, will put data frames in this list
-df_list <- vector("list", length(mu_sequence))
-
-
+df_list <- vector(
+  mode = "list",
+  length = length(mu_sequence)
+)
 
 for (i in seq_along(mu_sequence)) {
+  sol <- solve_sirv_ode(
+    beta = 0.15,
+    gamma = 0.1,
+    mu = mu_sequence[i],
+    x0 = 1 - 0.004,
+    y0 = 0.004,
+    v0 = 0,
+    T = 200,
+    h = 1
+  )
 
-    #storing the solution as a data frame 
-    #will then input into our df_list
-    #will end up with a list of data frames
-    sol <- as.data.frame(mu_function(mu_sequence[i]))
+  sol <- as.data.frame(sol)
 
-    df_list[[i]] <- data.frame(
-        time = sol$time,
-        y = sol$y,
-        mu = paste0("mu = ", mu_sequence[i])
+  df_list[[i]] <- data.frame(
+    time = sol$time,
+    infectious_proportion = sol$y,
+    mu = factor(
+      mu_sequence[i],
+      levels = mu_sequence
     )
+  )
 }
 
+df_p8 <- do.call(
+  rbind,
+  df_list
+)
 
-#combining the df_list into a large singular data frame
-#means i am able to plot it using ggplot
-df_p8 <- do.call(rbind, df_list)
-
-
-#plotting
-p8 <- ggplot(df_p8, aes(x = time, y = y, colour = mu)) +
-    geom_line() +
-    xlab("Time") +
-    ylab("Proportion of infection individuals")
+p8 <- ggplot(
+  df_p8,
+  aes(
+    x = time,
+    y = infectious_proportion,
+    colour = mu
+  )
+) +
+  geom_line() +
+  labs(
+    x = "Time",
+    y = "Infectious population proportion",
+    colour = expression(mu),
+    title = "Effect of the vaccination rate on infectious prevalence"
+  )
 
 print(p8)
+
+
+
+
+
 
 
 ```
