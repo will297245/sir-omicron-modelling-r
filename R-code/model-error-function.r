@@ -1,4 +1,4 @@
-error <- function(beta, gamma, x0, y0, data) {
+calculate_incidence_sse <- function(beta, gamma, x0, y0, data) {
     #largest time value in data
     T <- data$time[nrow(data)]
     #assuming equal step size
@@ -23,7 +23,7 @@ error <- function(beta, gamma, x0, y0, data) {
 
 factory_error <- function(gamma, x0, y0, data) {
     output <- function(beta) {
-        error(beta, gamma, x0, y0, data)
+        calculate_incidence_sse(beta, gamma, x0, y0, data)
     }
 
     return(output)
