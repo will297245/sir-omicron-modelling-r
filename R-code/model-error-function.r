@@ -7,7 +7,7 @@ calculate_incidence_sse <- function(beta, gamma, x0, y0, data) {
     #incidence from data set
     dt <- data$incidence
     #estimated incidence from previous  function
-    mt <- incidence(beta, gamma, x0, y0, T, h)$incidence
+    mt <- calculate_infectious_change(beta, gamma, x0, y0, T, h)$incidence
 
     #checking lengths of mt and dt are same
     if (length(mt) != length(dt)) {
