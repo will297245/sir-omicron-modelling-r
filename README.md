@@ -33,8 +33,8 @@ uses repeated stochastic simulations to quantify model uncertainty.
 
 ## Repository contents
 
-- `project.qmd` — complete Quarto analysis
-- `project.pdf` — rendered report
+- `epidemic-modelling.qmd` — complete Quarto analysis
+- `epidemic-modelling.r` — the underlying r code document
 - `omicron.csv` — data used in the analysis
 
 ## Reproducing the analysis
