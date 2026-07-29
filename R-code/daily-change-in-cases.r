@@ -6,6 +6,6 @@ calculate_infectious_change <- function(beta, gamma, x0, y0, T, h) {
 
     data.frame(
         t = model_output$t,
-        calculate_infectious_change = incidence_values
+        infectious_change = incidence_values
     )
 }
