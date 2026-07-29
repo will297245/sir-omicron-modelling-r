@@ -285,8 +285,6 @@ print(p5)
 
 ```{r}
 
-library(deSolve)
-
 
 tim <- seq(0, T, by = h)
 
@@ -304,7 +302,7 @@ return(sol)
 euler_p6 <- simulate_sir_euler(0.15, 0.1, 1 - 0.004, 0.004, 40, 1)
 
 #converting to dataframe so its plottable
-SIRV_soln_p6 <- solve(0.15, 0.1, 0, 1 - 0.004, 0.004, 0, 40, 1)
+SIRV_soln_p6 <- solve_sirv_ode(0.15, 0.1, 0, 1 - 0.004, 0.004, 0, 40, 1)
 SIRV_soln_p6 <- as.data.frame(SIRV_soln_p6)
 
 
@@ -348,7 +346,7 @@ print(p6)
 ```{r}
 
 #following standard as before
-solution_p7 <- solve(0.15, 0.1, 0.002, 1 - 0.004, 0.004, 0, 200, 1)
+solution_p7 <- solve_sirv_ode(0.15, 0.1, 0.002, 1 - 0.004, 0.004, 0, 200, 1)
 
 
 solution_p7 <- as.data.frame(solution_p7)
