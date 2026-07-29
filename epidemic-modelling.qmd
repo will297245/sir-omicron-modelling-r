@@ -636,6 +636,23 @@ simulation_summary <- do.call(
   })
 )
 
+
+
+many_sims <- simulate_many_markov(
+M = M,
+beta = beta_best_markov,
+gamma = 0.1,
+mu = 0,
+x0 = 1 - 0.004,
+y0 = 0.004,
+v0 = 0,
+T = T_fit,
+N_eff = N_eff
+)
+
+
+
+
 simulation_summary$t <- as.numeric(rownames(simulation_summary))
 rownames(simulation_summary) <- NULL
 
