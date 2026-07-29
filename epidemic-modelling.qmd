@@ -144,7 +144,7 @@ print(p2)
 
 
 ```{r}
-print(head(incidence(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
+print(head(calculate_infectious_change(0.6, 0.2, 0.9, 0.1, 40, 0.1)))
 ```
 
 
@@ -251,7 +251,7 @@ print(best_beta)
 #incidence
 observed_incidence <- omicron_data$cases / initial_population
 
-model_incidence <- incidence(best_beta, 0.1, 1 - 0.004, 0.004, 46, 1)
+model_incidence <- calculate_infectious_change(best_beta, 0.1, 1 - 0.004, 0.004, 46, 1)
 
 
 
