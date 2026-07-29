@@ -1,6 +1,6 @@
 function_factory_beta <- function(gamma, x0, y0, T, h) {
     function(beta) {
-        incidence(beta, gamma, x0, y0, T, h)
+        calculate_infectious_change(beta, gamma, x0, y0, T, h)
     }
 }
 
